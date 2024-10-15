@@ -1,0 +1,45 @@
+variables:
+  IMAGE_NAME: sboterop/cat-docker
+
+services:
+  - docker:dind
+
+stages:
+  - test
+  - build
+  - deploy
+
+# Paso 1: Validar que el servicio está funcionando correctamente
+test:
+  stage: test
+  image: node:18
+  script:
+    - npm install
+    - npm start &
+    - sleep 10
+    - npm test
+
+# Paso 2: Probar la construccion de la imagen Docker
+build:
+  stage: build
+  image: docker:latest
+  script:
+    - docker build -t $IMAGE_NAME .
+    - docker images
+  only:
+    - master
+
+# Paso 3: Publicar la imagen en Docker Hub
+deploy:
+  stage: deploy
+  image: docker:latest
+  before_script:
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+    - docker images
+  script:
+    - docker build -t $IMAGE_NAME .
+    - docker push $IMAGE_NAME
+  only:
+    - master
+
+
